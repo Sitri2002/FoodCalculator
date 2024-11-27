@@ -44,6 +44,7 @@ pub fn gui_your_info_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
             crate::gui_tools::gui_string_field(ui, "Gender:", &mut user.gender);
 
             // exercise field
+            /*
             user.exercise = crate::gui_tools::gui_number_field(
                 ui,
                 "Previous Excecise (idk):",
@@ -51,7 +52,7 @@ pub fn gui_your_info_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
                 0,
                 0,
                 500,
-            ) as u32;
+            ) as u32; */
 
             // layout the following buttons horizontally
             // save the user data to a file

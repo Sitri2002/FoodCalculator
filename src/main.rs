@@ -49,6 +49,11 @@ impl User {
         }
     }
 
+    fn calculate_exercise(&self) ->f64
+    {
+        0.0
+    }
+
     fn num_of_calories(&self) -> u32 {
         self.calories + self.exercise
     }
@@ -118,7 +123,14 @@ impl eframe::App for FoodCalculatorApp {
             if let Some(user) = &mut self.user {
                 calories = user.calculate_calories();
             }
+
+            let mut exercise: f64 = 0.0;
+            if let Some(user) = &mut self.user
+            {
+                exercise = user.calculate_exercise();
+            }
             ui.label(format!("Your Total Calories: {calories}"));
+            ui.label(format!("Your Total Exercise: {exercise}"))
         });
     }
 }
@@ -178,6 +190,14 @@ fn get_food_info() -> Food {
         sugar,
         protein,
     }
+}
+
+fn getExercise()
+{
+    println!("Please enter the amount of calories burned.");
+    let mut total_exercise = String::new();
+    io::stdin().read_line(&mut total_exercise);
+    let total_exercise: u32 = total_exercise.trim().parse().unwrap();
 }
 
 /**
