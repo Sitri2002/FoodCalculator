@@ -33,6 +33,7 @@ struct Food {
     carbohydrates: u32,
     sugar: u32,
     protein: u32,
+    category: String
 }
 
 // May need more stuff
@@ -151,6 +152,20 @@ pub fn build_user(name: &str, height: u32, age: u32, gender: &str, weight: f32) 
     }
 }
 
+pub fn build_food(item: &str, calories: u32, total_fat: u32, carbohydrates: u32, sugar: u32, protein: u32, category: &str) -> Food
+{
+    Food
+    {
+        item: item.to_string(),
+        calories: 0,
+        total_fat: 0,
+        carbohydrates: 0,
+        sugar: 0, 
+        protein: 0,
+        category: category.to_string()
+    }
+}
+
 // call this inside a loop to enter as many food items as we want
 fn get_food_info() -> Food {
     println!("Please enter your food item: ");
@@ -182,6 +197,10 @@ fn get_food_info() -> Food {
     io::stdin().read_line(&mut protein);
     let protein: u32 = protein.trim().parse().unwrap();
 
+    println!("Please enter this food's category: ");
+    let mut category = String::new();
+    io::stdin().read_line(&mut category).unwrap().to_string();
+
     Food {
         item,
         calories,
@@ -189,6 +208,7 @@ fn get_food_info() -> Food {
         carbohydrates,
         sugar,
         protein,
+        category,
     }
 }
 
