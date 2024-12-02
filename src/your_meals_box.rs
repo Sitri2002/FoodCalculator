@@ -26,13 +26,41 @@ pub fn gui_your_meals_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
             // weight field
             food.total_fat = crate::gui_tools::gui_number_field(
                 ui,
-                "Total Fat : ",
+                "Total Fat: ",
                 food.total_fat as i32,
                 0,
                 0,
                 500,
             ) as i32;
+
+            food.carbohydrates = crate::gui_tools::gui_number_field(
+                ui,
+                "Total Carbohydrates: ",
+                food.carbohydrates as i32,
+                0, 
+                0,
+                500
+            ) as i32;
+
+            food.sugar = crate::gui_tools::gui_number_field(
+                ui,
+                "Total Sugar: ",
+                food.sugar as i32,
+                0, 
+                0,
+                500
+            ) as i32;
          
+            food.protein = crate::gui_tools::gui_number_field(
+                ui,
+                "Total Protein: ",
+                food.protein as i32,
+                0, 
+                0,
+                500
+            ) as i32;
+
+            crate::gui_tools::gui_string_field(ui, "Category:", &mut food.item);
 
             ui.add_space(10.0);
             // display the rest of the options
