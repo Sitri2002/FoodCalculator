@@ -28,11 +28,11 @@ struct User {
 
 struct Food {
     item: String,
-    calories: u32,
-    total_fat: u32,
-    carbohydrates: u32,
-    sugar: u32,
-    protein: u32,
+    calories: i32,
+    total_fat: i32,
+    carbohydrates: i32,
+    sugar: i32,
+    protein: i32,
     category: String
 }
 
@@ -94,6 +94,7 @@ fn main() -> eframe::Result {
 #[derive(Default)]
 struct FoodCalculatorApp {
     user: Option<User>,
+    food: Option<Food>,
 }
 
 impl FoodCalculatorApp {
@@ -101,6 +102,7 @@ impl FoodCalculatorApp {
         Self::default()
     }
 }
+
 
 impl eframe::App for FoodCalculatorApp {
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
@@ -175,27 +177,27 @@ fn get_food_info() -> Food {
     println!("Please enter this food's calories: ");
     let mut calories = String::new();
     io::stdin().read_line(&mut calories);
-    let calories: u32 = calories.trim().parse().unwrap();
+    let calories: i32 = calories.trim().parse().unwrap();
 
     println!("Please enter this food's total fat : ");
     let mut total_fat = String::new();
     io::stdin().read_line(&mut total_fat);
-    let total_fat: u32 = total_fat.trim().parse().unwrap();
+    let total_fat: i32 = total_fat.trim().parse().unwrap();
 
     println!("Please enter this food's carbohydrates: ");
     let mut carbohydrates = String::new();
     io::stdin().read_line(&mut carbohydrates);
-    let carbohydrates: u32 = carbohydrates.trim().parse().unwrap();
+    let carbohydrates: i32 = carbohydrates.trim().parse().unwrap();
 
     println!("Please enter this food's sugar: ");
     let mut sugar = String::new();
     io::stdin().read_line(&mut sugar);
-    let sugar: u32 = sugar.trim().parse().unwrap();
+    let sugar: i32 = sugar.trim().parse().unwrap();
 
     println!("Please enter this food's protein: ");
     let mut protein = String::new();
     io::stdin().read_line(&mut protein);
-    let protein: u32 = protein.trim().parse().unwrap();
+    let protein: i32 = protein.trim().parse().unwrap();
 
     println!("Please enter this food's category: ");
     let mut category = String::new();

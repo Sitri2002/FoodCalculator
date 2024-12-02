@@ -17,21 +17,21 @@ pub fn gui_your_meals_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
             food.calories = crate::gui_tools::gui_number_field(
                 ui, 
                 "Calories: ", 
-                food.calories as u32, 
+                food.calories as i32, 
                 0,
                 0, 
                 500
-            ) as u32;
+            ) as i32;
 
             // weight field
             food.total_fat = crate::gui_tools::gui_number_field(
                 ui,
                 "Total Fat : ",
-                food.total_fat as u32,
+                food.total_fat as i32,
                 0,
                 0,
                 500,
-            ) as f32;
+            ) as i32;
          
 
             ui.add_space(10.0);
