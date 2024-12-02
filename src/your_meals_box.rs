@@ -69,7 +69,7 @@ pub fn gui_your_meals_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
             });
         } else {
             // otherwise, show a warning message
-            ui.colored_label(Color32::LIGHT_RED, "No user created / loaded!");
+           
 
             ui.horizontal(|ui| {
                 gui_create_food(app, ui);
@@ -82,9 +82,18 @@ pub fn gui_your_meals_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
                 app.food = Some(crate::build_food("", 0, 0, 0, 0, 0, "Breakfast"));
     
             }
-            if ui.button("Add Lunch").clicked() {}
-            if ui.button("Add Dinner").clicked() {}
-            if ui.button("Add Snack").clicked() {}
+            if ui.button("Add Lunch").clicked() {
+                app.food = Some(crate::build_food("", 0, 0, 0, 0, 0, "Lunch"));
+    
+            }
+            if ui.button("Add Dinner").clicked() {
+                app.food = Some(crate::build_food("", 0, 0, 0, 0, 0, "Dinner"));
+    
+            }
+            if ui.button("Add Snack").clicked() {
+                app.food = Some(crate::build_food("", 0, 0, 0, 0, 0, "Snack"));
+    
+            }
             if ui.button("Add Exercise").clicked() {}
         }
 
