@@ -12,8 +12,8 @@ struct UserProfile {
     name: String,
     age: u32,
     gender: String,
-    height_cm: f32,
-    weight_kg: f32,
+    height: f32,
+    weight: f32,
     calorie_consumption: f32,
     calorie_burned: f32,
 }
@@ -78,21 +78,21 @@ impl App {
     fn calculate_calories(&self) -> f32 {
         let bmr = match self.data.user_profile.gender.to_lowercase().as_str() {
             "male" => {
-                10.0 * self.data.user_profile.weight_kg
-                    + 6.25 * self.data.user_profile.height_cm
+                10.0 * self.data.user_profile.weight
+                    + 6.25 * self.data.user_profile.height
                     - 5.0 * self.data.user_profile.age as f32
                     + 5.0
             }
             "female" => {
-                10.0 * self.data.user_profile.weight_kg
-                    + 6.25 * self.data.user_profile.height_cm
+                10.0 * self.data.user_profile.weight
+                    + 6.25 * self.data.user_profile.height
                     - 5.0 * self.data.user_profile.age as f32
                     - 161.0
             }
             _ => 0.0,
         };
 
-        bmr * 1.2 // Default sedentary multiplier
+        bmr * 1.2 // Default no exercise multiplier
     }
 
     fn save_data(&mut self) {
@@ -155,12 +155,12 @@ impl eframe::App for App {
 
             ui.horizontal(|ui| {
                 ui.label("Height (cm):");
-                ui.add(egui::DragValue::new(&mut self.data.user_profile.height_cm).speed(1.0));
+                ui.add(egui::DragValue::new(&mut self.data.user_profile.height).speed(1.0));
             });
 
             ui.horizontal(|ui| {
                 ui.label("Weight (kg):");
-                ui.add(egui::DragValue::new(&mut self.data.user_profile.weight_kg).speed(1.0));
+                ui.add(egui::DragValue::new(&mut self.data.user_profile.weight).speed(1.0));
             });
 
             if ui.button("Calculate Daily Calorie Needs").clicked() {
@@ -244,7 +244,7 @@ impl eframe::App for App {
                 self.data.exercise_tracker.add_exercise(
                     &self.selected_activity,
                     self.new_exercise.time_minutes,
-                    self.data.user_profile.weight_kg,
+                    self.data.user_profile.weight,
                 );
                 self.new_exercise = Exercise::default();
             }
