@@ -163,9 +163,8 @@ impl eframe::App for App {
                 ui.add(egui::DragValue::new(&mut self.data.user_profile.weight).speed(1.0));
             });
 
-            if ui.button("Calculate Daily Calorie Needs").clicked() {
-                self.calculated_calories = Some(self.calculate_calories());
-            }
+            self.calculated_calories = Some(self.calculate_calories());
+        
 
             if let Some(calories) = self.calculated_calories {
                 ui.label(format!("Daily Calorie Needs: {:.2} Calories", calories));
@@ -270,7 +269,7 @@ impl eframe::App for App {
             if let Some(calories_needed) = self.calculated_calories {
                 let calories_eaten = self.data.food_tracker.total_calories;
                 let calories_burned = self.data.exercise_tracker.total_calories_burned();
-                let excess_calories = calories_eaten - (calories_needed - calories_burned);
+                let excess_calories = calories_eaten - (calories_needed + calories_burned);
 
                 ui.label(format!("Calories Needed: {:.2} Calories", calories_needed));
                 ui.label(format!("Calories Eaten: {:.2} Calories", calories_eaten));
