@@ -1,282 +1,320 @@
-use eframe::egui::{Ui};
-use your_info_box::gui_your_info_box;
-use your_meals_box::gui_your_meals_box;
-use std::fs::File;
-use std::io::{self, stdin, BufRead, BufReader, LineWriter, Write};
+mod food_tracker;
+mod exercise_tracker;
 
-pub mod your_info_box;
-pub mod your_meals_box;
-pub mod gui_tools;
+use food_tracker::{FoodEntry, FoodTracker};
+use exercise_tracker::{Exercise, ExerciseTracker};
+use eframe::egui;
+use serde::{Deserialize, Serialize};
+use std::fs;
 
-extern crate eframe;
-
-struct User {
-    name: String, // Name of person
-    height: u32,  // This would be in inches which we can convert to cm
-    gender: String,
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct UserProfile {
+    name: String,
     age: u32,
-    weight: f32,   // Pounds, we can then convert to kg
-    calories: u32, // how many calories the person has
-    exercise: u32, // The amount of exercise
-
-    // These can be lists of food
-    breakfast: Vec<Food>,
-    lunch: Vec<Food>,
-    dinner: Vec<Food>,
-    snacks: Vec<Food>,
+    gender: String,
+    height_cm: f32,
+    weight_kg: f32,
+    calorie_consumption: f32,
+    calorie_burned: f32,
 }
 
-struct Food {
-    item: String,
-    calories: i32,
-    total_fat: i32,
-    carbohydrates: i32,
-    sugar: i32,
-    protein: i32,
-    category: String
-}
-
-// May need more stuff
-impl User {
-    fn calculate_calories(&self) -> f64 {
-        let weight_in_kg: f64 = self.weight as f64 * 0.45;
-        let height_in_cm: f64 = self.height as f64 * 2.54;
-
-        // Calculate calories
-        if self.gender == "male" {
-            (10.0 * weight_in_kg) + (6.25 * height_in_cm) - (5.0 * self.age as f64) + 5.0
-        } else {
-            (10.0 * weight_in_kg) + (6.25 * height_in_cm) - (5.0 * self.age as f64) - 161.0
-        }
-    }
-
-    fn calculate_exercise(&self) ->f64
-    {
-        0.0
-    }
-
-    fn num_of_calories(&self) -> u32 {
-        self.calories + self.exercise
-    }
-
-    fn save(&self, path: &str) -> io::Result<bool> {
-        let file = File::create(path)?;
-        let mut writer = LineWriter::new(file);
-        writer.write_all(self.name.as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-        writer.write_all(self.height.to_string().as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-        writer.write_all(self.age.to_string().as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-        writer.write_all(self.gender.as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-        writer.write_all(self.weight.to_string().as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-        writer.write_all(self.exercise.to_string().as_bytes())?;
-        writer.write_all("\n".as_bytes())?;
-
-        writer.flush()?;
-        
-        Ok(true)
-    }
-    
-}
-
-fn main() -> eframe::Result {
-    let native_options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "Calorie Calculator",
-        native_options,
-        Box::new(|cc| Ok(Box::new(FoodCalculatorApp::new(cc)))),
-    )
+#[derive(Serialize, Deserialize, Default)]
+struct AppData {
+    user_profile: UserProfile,
+    food_tracker: FoodTracker,
+    exercise_tracker: ExerciseTracker,
 }
 
 #[derive(Default)]
-struct FoodCalculatorApp {
-    user: Option<User>,
-    food: Option<Food>,
+struct App {
+    data: AppData,
+    calculated_calories: Option<f32>,
+    new_food: FoodEntry,
+    new_exercise: Exercise,
+    profile_folder: String,
+    available_profiles: Vec<String>,
+    selected_profile: Option<String>,
+    selected_activity: String,
 }
 
-impl FoodCalculatorApp {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self::default()
+impl App {
+    fn new() -> Self {
+        let profile_folder = "profiles".to_string();
+        fs::create_dir_all(&profile_folder).unwrap_or_else(|e| {
+            println!("Error creating profile folder: {}", e);
+        });
+        let available_profiles = Self::get_profile_list(&profile_folder);
+        App {
+            profile_folder,
+            available_profiles,
+            selected_activity: "Running".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn get_profile_list(folder: &str) -> Vec<String> {
+        if let Err(e) = fs::create_dir_all(folder) {
+            println!("Failed to create profile folder: {}", e);
+            return vec![];
+        }
+
+        fs::read_dir(folder)
+            .unwrap()
+            .filter_map(|entry| {
+                entry.ok().and_then(|e| {
+                    let path = e.path();
+                    if path.is_file() {
+                        path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect()
+    }
+
+    fn calculate_calories(&self) -> f32 {
+        let bmr = match self.data.user_profile.gender.to_lowercase().as_str() {
+            "male" => {
+                10.0 * self.data.user_profile.weight_kg
+                    + 6.25 * self.data.user_profile.height_cm
+                    - 5.0 * self.data.user_profile.age as f32
+                    + 5.0
+            }
+            "female" => {
+                10.0 * self.data.user_profile.weight_kg
+                    + 6.25 * self.data.user_profile.height_cm
+                    - 5.0 * self.data.user_profile.age as f32
+                    - 161.0
+            }
+            _ => 0.0,
+        };
+
+        bmr * 1.2 // Default sedentary multiplier
+    }
+
+    fn save_data(&mut self) {
+        if self.data.user_profile.name.is_empty() {
+            println!("User name is required to save data!");
+            return;
+        }
+
+        let file_name = format!("{}/{}.json", self.profile_folder, self.data.user_profile.name);
+        if let Ok(json) = serde_json::to_string(&self.data) {
+            if fs::write(&file_name, json).is_ok() {
+                println!("Data saved to {}", file_name);
+            }
+        }
+        self.update_profile_list();
+    }
+
+    fn load_data(&mut self) {
+        if let Some(profile) = &self.selected_profile {
+            let file_name = format!("{}/{}.json", self.profile_folder, profile);
+            if let Ok(json) = fs::read_to_string(&file_name) {
+                if let Ok(data) = serde_json::from_str(&json) {
+                    self.data = data;
+                    println!("Data loaded from {}", file_name);
+                }
+            }
+        }
+    }
+
+    fn update_profile_list(&mut self) {
+        self.available_profiles = Self::get_profile_list(&self.profile_folder);
     }
 }
 
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Daily Calorie Tracker");
 
-impl eframe::App for FoodCalculatorApp {
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
-        eframe::egui::CentralPanel::default().show(ctx, |ui| {
-            // draw the header
-            ui.heading("Calorie Calculator");
-            ui.add_space(10.0);
+            // User Profile Input
+            ui.horizontal(|ui| {
+                ui.label("Name:");
+                ui.text_edit_singleline(&mut self.data.user_profile.name);
+            });
 
-            // draw the info box
-            gui_your_info_box(self, ui);
+            ui.horizontal(|ui| {
+                ui.label("Age:");
+                ui.add(egui::DragValue::new(&mut self.data.user_profile.age).speed(1));
+            });
 
-            ui.add_space(10.0);
+            ui.horizontal(|ui| {
+                ui.label("Gender:");
+                egui::ComboBox::from_label("Select Gender")
+                    .selected_text(&self.data.user_profile.gender)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.data.user_profile.gender, "Male".to_string(), "Male");
+                        ui.selectable_value(&mut self.data.user_profile.gender, "Female".to_string(), "Female");
+                    });
+            });
 
-            // draw the meals box
-            gui_your_meals_box(self, ui);
+            ui.horizontal(|ui| {
+                ui.label("Height (cm):");
+                ui.add(egui::DragValue::new(&mut self.data.user_profile.height_cm).speed(1.0));
+            });
 
-            // draw the footer
-            ui.add_space(10.0);
+            ui.horizontal(|ui| {
+                ui.label("Weight (kg):");
+                ui.add(egui::DragValue::new(&mut self.data.user_profile.weight_kg).speed(1.0));
+            });
 
-            let mut calories: f64 = 0.0;
-            if let Some(user) = &mut self.user {
-                calories = user.calculate_calories();
+            if ui.button("Calculate Daily Calorie Needs").clicked() {
+                self.calculated_calories = Some(self.calculate_calories());
             }
 
-            let mut exercise: f64 = 0.0;
-            if let Some(user) = &mut self.user
-            {
-                exercise = user.calculate_exercise();
+            if let Some(calories) = self.calculated_calories {
+                ui.label(format!("Daily Calorie Needs: {:.2} Calories", calories));
             }
-            ui.label(format!("Your Total Calories: {calories}"));
-            ui.label(format!("Your Total Exercise: {exercise}"))
+
+            // Food Tracker
+            ui.separator();
+            ui.label("Add Food:");
+
+            ui.horizontal(|ui| {
+                ui.label("Name:");
+                ui.text_edit_singleline(&mut self.new_food.name);
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Calories:");
+                ui.add(egui::DragValue::new(&mut self.new_food.calories).speed(10.0));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Protein (g):");
+                ui.add(egui::DragValue::new(&mut self.new_food.protein).speed(1.0));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Carbs (g):");
+                ui.add(egui::DragValue::new(&mut self.new_food.carbs).speed(1.0));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Fat (g):");
+                ui.add(egui::DragValue::new(&mut self.new_food.fat).speed(1.0));
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Sugar (g):");
+                ui.add(egui::DragValue::new(&mut self.new_food.sugar).speed(1.0));
+            });
+
+            if ui.button("Add Food").clicked() {
+                self.data.food_tracker.add_food(self.new_food.clone());
+                self.new_food = FoodEntry::default();
+            }
+
+            ui.separator();
+            ui.label("Total Nutrients:");
+            ui.label(format!("Calories: {:.2} Calories", self.data.food_tracker.total_calories));
+            ui.label(format!("Protein: {:.2} g", self.data.food_tracker.total_protein));
+            ui.label(format!("Carbs: {:.2} g", self.data.food_tracker.total_carbs));
+            ui.label(format!("Fat: {:.2} g", self.data.food_tracker.total_fat));
+            ui.label(format!("Sugar: {:.2} g", self.data.food_tracker.total_sugar));
+
+            // Exercise Tracker
+            ui.separator();
+            ui.label("Add Exercise:");
+
+            ui.horizontal(|ui| {
+                ui.label("Activity:");
+                egui::ComboBox::from_label("Select Activity")
+                    .selected_text(&self.selected_activity)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.selected_activity, "Running".to_string(), "Running");
+                        ui.selectable_value(&mut self.selected_activity, "Weight Lifting".to_string(), "Weight Lifting");
+                        ui.selectable_value(&mut self.selected_activity, "Biking".to_string(), "Biking");
+                        ui.selectable_value(&mut self.selected_activity, "Regular Exercise".to_string(), "Regular Exercise");
+                        ui.selectable_value(&mut self.selected_activity, "Swimming".to_string(), "Swimming");
+                    });
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Time (minutes):");
+                ui.add(egui::DragValue::new(&mut self.new_exercise.time_minutes).speed(1.0));
+            });
+
+            if ui.button("Add Exercise").clicked() {
+                self.data.exercise_tracker.add_exercise(
+                    &self.selected_activity,
+                    self.new_exercise.time_minutes,
+                    self.data.user_profile.weight_kg,
+                );
+                self.new_exercise = Exercise::default();
+            }
+
+            // Display Exercises
+            ui.separator();
+            ui.label("Exercises:");
+            for exercise in &self.data.exercise_tracker.exercises {
+                ui.label(format!(
+                    "{}: {:.2} minutes, {:.2} Calories burned",
+                    exercise.activity, exercise.time_minutes, exercise.calories_burned
+                ));
+            }
+
+            ui.label(format!(
+                "Total Calories Burned: {:.2} Calories",
+                self.data.exercise_tracker.total_calories_burned()
+            ));
+
+            // Summary
+            ui.separator();
+            ui.label("Summary:");
+            if let Some(calories_needed) = self.calculated_calories {
+                let calories_eaten = self.data.food_tracker.total_calories;
+                let calories_burned = self.data.exercise_tracker.total_calories_burned();
+                let excess_calories = calories_eaten - (calories_needed - calories_burned);
+
+                ui.label(format!("Calories Needed: {:.2} Calories", calories_needed));
+                ui.label(format!("Calories Eaten: {:.2} Calories", calories_eaten));
+                ui.label(format!("Calories Burned: {:.2} Calories", calories_burned));
+                ui.label(format!("Excess Calories: {:.2} Calories", excess_calories));
+            }
+
+            // Save and Load Buttons
+            ui.separator();
+            if ui.button("Save All Data").clicked() {
+                self.save_data();
+            }
+
+            ui.horizontal(|ui| {
+                ui.label("Select Profile:");
+                egui::ComboBox::from_label("")
+                    .selected_text(
+                        self.selected_profile
+                            .clone()
+                            .unwrap_or_else(|| "Select a profile".to_string()),
+                    )
+                    .show_ui(ui, |ui| {
+                        for profile in &self.available_profiles {
+                            ui.selectable_value(&mut self.selected_profile, Some(profile.clone()), profile);
+                        }
+                    });
+            });
+
+            if ui.button("Load Selected Profile").clicked() {
+                self.load_data();
+            }
         });
     }
 }
 
-pub fn build_user(name: &str, height: u32, age: u32, gender: &str, weight: f32) -> User {
-    User {
-        name: name.to_string(),
-        height,
-        gender: gender.to_string(),
-        age,
-        weight,
-        calories: 0,
-        exercise: 0,
-        breakfast: vec![],
-        lunch: vec![],
-        dinner: vec![],
-        snacks: vec![],
-    }
-}
-
-pub fn build_food(item: &str, calories: u32, total_fat: u32, carbohydrates: u32, sugar: u32, protein: u32, category: &str) -> Food
-{
-    Food
-    {
-        item: item.to_string(),
-        calories: 0,
-        total_fat: 0,
-        carbohydrates: 0,
-        sugar: 0, 
-        protein: 0,
-        category: category.to_string()
-    }
-}
-
-// call this inside a loop to enter as many food items as we want
-fn get_food_info() -> Food {
-    println!("Please enter your food item: ");
-    let mut item = String::new();
-    io::stdin().read_line(&mut item).unwrap().to_string();
-
-    println!("Please enter this food's calories: ");
-    let mut calories = String::new();
-    io::stdin().read_line(&mut calories);
-    let calories: i32 = calories.trim().parse().unwrap();
-
-    println!("Please enter this food's total fat : ");
-    let mut total_fat = String::new();
-    io::stdin().read_line(&mut total_fat);
-    let total_fat: i32 = total_fat.trim().parse().unwrap();
-
-    println!("Please enter this food's carbohydrates: ");
-    let mut carbohydrates = String::new();
-    io::stdin().read_line(&mut carbohydrates);
-    let carbohydrates: i32 = carbohydrates.trim().parse().unwrap();
-
-    println!("Please enter this food's sugar: ");
-    let mut sugar = String::new();
-    io::stdin().read_line(&mut sugar);
-    let sugar: i32 = sugar.trim().parse().unwrap();
-
-    println!("Please enter this food's protein: ");
-    let mut protein = String::new();
-    io::stdin().read_line(&mut protein);
-    let protein: i32 = protein.trim().parse().unwrap();
-
-    println!("Please enter this food's category: ");
-    let mut category = String::new();
-    io::stdin().read_line(&mut category).unwrap().to_string();
-
-    Food {
-        item,
-        calories,
-        total_fat,
-        carbohydrates,
-        sugar,
-        protein,
-        category,
-    }
-}
-
-fn getExercise()
-{
-    println!("Please enter the amount of calories burned.");
-    let mut total_exercise = String::new();
-    io::stdin().read_line(&mut total_exercise);
-    let total_exercise: u32 = total_exercise.trim().parse().unwrap();
-}
-
-/**
- * This function loads a user from a path
- */
-fn load_user(path: &str) -> io::Result<crate::User> {
-    let file = File::open(path)?;
-    let content = BufReader::new(file);
-
-    let lines: Vec<String> = content
-        .lines()
-        .map(|line| line.expect("Unable to parse the file"))
-        .collect();
-
-    // read the name from line 0
-    let mut name = if lines.len() > 0 {
-        lines[0].as_str()
-    } else {
-        "No Name"
+fn main() -> Result<(), eframe::Error> {
+    let options = eframe::NativeOptions {
+        initial_window_size: Some(egui::vec2(800.0, 850.0)), // Adjust as needed
+        ..Default::default()
     };
 
-    // read the height from line 1
-    let mut height = if lines.len() > 1 {
-        lines[1].as_str().parse::<u32>().unwrap()
-    } else {
-        60
-    };
-
-    // read the age from line 2
-    let mut age = if lines.len() > 2 {
-        lines[2].as_str().parse::<u32>().unwrap()
-    } else {
-        18
-    };
-
-    // read the gender from line 3
-    let mut gender = if lines.len() > 3 {
-        lines[3].as_str()
-    } else {
-        "male"
-    };
-
-    // read the weight from line 4
-    let mut weight = if lines.len() > 4 {
-        lines[4].as_str().parse::<f32>().unwrap()
-    } else {
-        200.0
-    };
-
-    // read the exercise from line 5
-    let mut excercise = if lines.len() > 5 {
-        lines[5].as_str().parse::<u32>().unwrap()
-    } else {
-        0
-    };
-
-    let mut user = crate::build_user(name, height, age, gender, weight);
-    user.exercise = excercise;
-    Ok(user)
+    eframe::run_native(
+        "Calorie Tracker",
+        options,
+        Box::new(|_cc| Box::new(App::new())),
+    )
 }
