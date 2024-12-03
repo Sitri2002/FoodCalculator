@@ -21,12 +21,6 @@ pub struct ExerciseTracker {
 // Methods implement for exercise tracker struct, calculate calories burned through exercise type
 // and time spent working out
 impl ExerciseTracker {
-    pub fn new() -> Self {
-        ExerciseTracker {
-            exercises: Vec::new(),
-        }
-    }
-
     pub fn add_exercise(&mut self, activity: &str, time_minutes: f32, user_weight: f32) {
         let met = match activity.to_lowercase().as_str() {
             "running" => 9.8,
