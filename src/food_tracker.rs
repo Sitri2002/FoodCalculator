@@ -1,6 +1,13 @@
+// Authors: Jack Nguyen, Audrey Hall, Caleb Moore, Ethan Rees
+
 use serde::{Deserialize, Serialize};
 
+/* Add Serialize and Deserialize trait to save/load files
+Add Default trait to conveinently create struct instances, since we use a lot of inheritance here
+Add Clone trait to interact with instances data values independently 
+*/ 
 #[derive(Serialize, Deserialize, Default, Clone)]
+// Struct of single food entry nutrients
 pub struct FoodEntry {
     pub name: String,
     pub calories: f32,
@@ -10,6 +17,7 @@ pub struct FoodEntry {
     pub sugar: f32,
 }
 
+// Struct of total diet
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct FoodTracker {
     pub entries: Vec<FoodEntry>,
@@ -20,6 +28,7 @@ pub struct FoodTracker {
     pub total_sugar: f32,
 }
 
+// implement add_food method to calculate total diet
 impl FoodTracker {
     pub fn add_food(&mut self, food: FoodEntry) {
         self.total_calories += food.calories;
@@ -28,14 +37,5 @@ impl FoodTracker {
         self.total_fat += food.fat;
         self.total_sugar += food.sugar;
         self.entries.push(food);
-    }
-
-    pub fn clear(&mut self) {
-        self.entries.clear();
-        self.total_calories = 0.0;
-        self.total_protein = 0.0;
-        self.total_carbs = 0.0;
-        self.total_fat = 0.0;
-        self.total_sugar = 0.0;
     }
 }
