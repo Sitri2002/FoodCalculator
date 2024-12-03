@@ -18,7 +18,7 @@ pub fn gui_your_info_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
                 0,
                 0, 
                 500
-            ) as u32;
+            ) as f32;
 
             // weight field
             user.weight = crate::gui_tools::gui_number_field(
@@ -38,7 +38,7 @@ pub fn gui_your_info_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
                 0,
                 0,
                 500,
-            ) as u32;
+            ) as f32;
 
             // gender field
             crate::gui_tools::gui_string_field(ui, "Gender:", &mut user.gender);
@@ -83,15 +83,19 @@ pub fn gui_your_info_box(app: &mut crate::FoodCalculatorApp, ui: &mut Ui) {
 
         fn gui_create_load_user(app: &mut FoodCalculatorApp, ui: &mut Ui) {
             if ui.button("Create New User").clicked() {
-                app.user = Some(crate::build_user("", 60, 18, "male", 180.0));
+                app.user = Some(crate::build_user("", 60.0, 18.0, "male", 180.0));
             }
 
             if ui.button("Load Existing User").clicked() {
+                // open the file dialog to choose a user file
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("User File", &["ccuser"])
                     .pick_file()
                 {
+                    // get the string version of the path
                     if let Some(path_str) = path.to_str() {
+
+                        // load in the user
                         match crate::load_user(path_str) {
                             Ok(user) => {
                                 app.user = Some(user);

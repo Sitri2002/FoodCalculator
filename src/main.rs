@@ -12,9 +12,9 @@ extern crate eframe;
 
 struct User {
     name: String, // Name of person
-    height: u32,  // This would be in inches which we can convert to cm
+    height: f32,  // This would be in inches which we can convert to cm
     gender: String,
-    age: u32,
+    age: f32,
     weight: f32,   // Pounds, we can then convert to kg
     calories: u32, // how many calories the person has
     exercise: u32, // The amount of exercise
@@ -138,7 +138,7 @@ impl eframe::App for FoodCalculatorApp {
     }
 }
 
-pub fn build_user(name: &str, height: u32, age: u32, gender: &str, weight: f32) -> User {
+pub fn build_user(name: &str, height: f32, age: f32, gender: &str, weight: f32) -> User {
     User {
         name: name.to_string(),
         height,
@@ -242,17 +242,17 @@ fn load_user(path: &str) -> io::Result<crate::User> {
     };
 
     // read the height from line 1
-    let mut height = if lines.len() > 1 {
-        lines[1].as_str().parse::<u32>().unwrap()
+    let mut height: f32 = if lines.len() > 1 {
+        lines[1].as_str().parse::<f32>().unwrap()
     } else {
-        60
+        60.0
     };
 
     // read the age from line 2
-    let mut age = if lines.len() > 2 {
-        lines[2].as_str().parse::<u32>().unwrap()
+    let mut age: f32 = if lines.len() > 2 {
+        lines[2].as_str().parse::<f32>().unwrap()
     } else {
-        18
+        18.0
     };
 
     // read the gender from line 3
